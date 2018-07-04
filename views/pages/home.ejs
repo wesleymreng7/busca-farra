@@ -1,0 +1,194 @@
+<% include ../partials/header.ejs %>
+    <section class="content">
+        <div class="container-fluid">
+            <div class="block-header">
+                <h2>Feed de eventos</h2>
+            </div>
+            <!-- Basic Example -->
+            <div class="row clearfix" id="conteudo">
+                <% results.data.forEach(e => { %>
+                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                    <div class="card">
+                        <a href="/evento/<%= e._id %>/<%= e.title.replace(/ /g,'') %>">
+                            <img src="/uploads/<%= e.img %>" width="100%"/>
+                            <div class="header">
+                                <h2>
+                                    <%= e.title %><small><%= e.date %> - <%= e.hour %></small>
+                                </h2>
+                            </div>
+                        </a>
+                        <div class="body">
+                            <div class="row">
+                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                    <% 
+                                    if(locals.user) {
+                                        if(locals.user.likes.indexOf(e._id.toString()) > -1) { 
+                                    %>
+                                     <button class="btn btn-danger btn-circle waves-effect waves-circle waves-float like" data-id="<%= e._id %>"><i class="material-icons">favorite</i></button>
+                                    <% } else { %>
+                                        <button class="btn btn-grey btn-circle waves-effect waves-circle waves-float like" data-id="<%= e._id %>"><i class="material-icons">favorite</i></button>
+                                    <%
+                                    }
+                                    %>
+                                        
+
+                                    <% 
+                                    if(locals.user.events.indexOf(e._id.toString()) > -1) { 
+                                    %>
+                                        <button class="btn btn-success btn-circle waves-effect waves-circle waves-float add" data-id="<%= e._id %>"><i class="material-icons">done</i></button>
+                                    <% } else { %>
+                                        <button class="btn btn-grey btn-circle waves-effect waves-circle waves-float add" data-id="<%= e._id %>"><i class="material-icons">done</i></button>
+                                    <% 
+                                    }
+                                    %>
+                                
+                                <% } %>
+                                </div>
+                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                    <small class="alert alert-danger" id="likes-<%= e._id %>"><%= e.likes.length %></small>
+                                    <small class="alert alert-success" id="presents-<%= e._id %>"><%= e.presents.length %></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+        </div>
+    </section>
+<script src="/plugins/jquery/jquery.min.js"></script>
+<% if(locals.user) { %>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $.ajaxSetup({
+            // Instructions for how to deserialize a `mycustomtype`
+            dataType: 'json',
+            crossDomain: true,
+            //contentType: "application/json",
+            headers: { "Accept": "application/json; odata=verbose" },
+            cache: false,
+            beforeSend : function(xhr) {
+                xhr.setRequestHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+                xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+                xhr.setRequestHeader('Authorization', '*')
+            }
+        });
+        /*$('.like').click(function(e) {
+            $.post('http://localhost:3000/like', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#likes-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-danger')
+                    $(selector).text(data.totalLikes.toString())
+                } else {
+                    $(this).removeClass('btn-danger').addClass('btn-grey')
+                    $(selector).text(data.totalLikes.toString())
+                }
+            })
+        })
+        $('.add').click(function(e) {
+            $.post('http://localhost:3000/calendar', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#presents-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-success')
+                    $(selector).text(data.totalPresents.toString())
+                } else {
+                    $(this).removeClass('btn-success').addClass('btn-grey')
+                    $(selector).text(data.totalPresents.toString())
+                }
+            })
+        })*/
+
+        $(document).on('click','.like', function(e) {
+            $.post('http://localhost:3000/like', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#likes-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-danger')
+                    $(selector).text(data.totalLikes.toString())
+                } else {
+                    $(this).removeClass('btn-danger').addClass('btn-grey')
+                    $(selector).text(data.totalLikes.toString())
+                }
+            }).fail(function(e) {
+                alert(JSON.stringify(e))
+            })
+        })
+        $(document).on('click','.add', function() {
+            $.post('http://localhost:3000/calendar', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#presents-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-success')
+                    $(selector).text(data.totalPresents.toString())
+                } else {
+                    $(this).removeClass('btn-success').addClass('btn-grey')
+                    $(selector).text(data.totalPresents.toString())
+                }
+            }).fail(function(e) {
+                alert(e.error)
+            })
+            return false
+        })
+    })
+</script>
+<% } %>
+
+<% include ../partials/footer.ejs %>
+
+<script type="text/javascript">
+            var count = 1;
+            var total = <%= results.pagination.pages - 1 %>
+            $(window).scroll(function(){
+                if (count > total){
+                    return false;
+                }else{
+                    loadArticle(count);
+                }
+                count++;
+            }); 
+ 
+            function loadArticle(pageNumber){    
+                $.get('http://localhost:3000/eventos?page='+pageNumber, function(html) {
+                    html.data.forEach(e => {
+                        const content = `
+                        <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                            <div class="card">
+                                <a href="/evento/${e._id}/${e.title.replace(/ /g,'')}">
+                                    <img src="/uploads/${e.img}" width="100%"/>
+                                    <div class="header">
+                                        <h2>
+                                            ${e.title}<small>${e.date} - ${e.hour}</small>
+                                        </h2>
+                                    </div>
+                                </a>
+                                <div class="body">
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                            <button class="btn btn-danger btn-circle waves-effect waves-circle waves-float"><i class="material-icons">favorite</i></button>
+                                            <button class="btn btn-success btn-circle waves-effect waves-circle waves-float"><i class="material-icons">done</i></button>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                            <small class="alert alert-danger">50${e.likes.length}</small>
+                                            <small class="alert alert-success">10${e.presents.length}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                        $('#conteudo').append(content)
+                    })
+                })
+                return false;
+            }
+</script>

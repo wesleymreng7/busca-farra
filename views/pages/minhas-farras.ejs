@@ -1,0 +1,173 @@
+<% include ../partials/header.ejs %>
+    <section class="content">
+        <div class="container-fluid">
+            <div class="block-header">
+                <h2>Feed de eventos</h2>
+            </div>
+            <div class="row">
+                <div class="col-sm-0 col-md-4"></div>
+                <div class="col-sm-0 col-md-4">
+                </div>
+                <div class="col-sm-12 col-md-4"><div class="classic-theme red" id="my-calendar"></div></div>
+            </div>
+            
+            <!-- Basic Example -->
+            <div class="row clearfix" id="conteudo">
+                
+            </div>
+        </div>
+    </section>
+<script src="/plugins/jquery/jquery.min.js"></script>
+<!-- Create the calendar -->
+<script type="text/javascript">
+    
+</script>
+<% if(locals.user) { %>
+<script type="text/javascript">
+    $(document).ready(function() {
+        
+        const locals_likes = '<%= locals.user.likes %>'
+        const locals_events = '<%= locals.user.events %>'
+        const user_likes = locals_likes.split(',')
+        const user_events = locals_events.split(',')
+        let user = {
+            _id: '<%= locals.user._id %>',
+            username: '<%= locals.user.username %>',
+            email: '<%= locals.user.email %>',
+            name: '<%= locals.user.name %>',
+            likes: user_likes,
+            events: user_events
+        }
+
+        // calendário
+        var element = document.getElementById("my-calendar")
+        var myCalendar = jsCalendar.new(element)
+
+        const setEventsDay = (events) => {
+            $('#conteudo').hide()
+            $('#conteudo div').remove()
+            events.forEach(e => {
+                let content = `
+                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                    <div class="card">
+                        <a href="/evento/${e._id}/${e.title.replace(/ /g,'')}">
+                            <img src="/uploads/${e.img}" width="100%"/>
+                            <div class="header">
+                                <h2>
+                                    ${e.title}<small>${e.date} - ${e.hour}</small>
+                                </h2>
+                            </div>
+                        </a>
+                        <div class="body">
+                            <div class="row">
+                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">`
+                                
+                                if(user.likes.indexOf(e._id.toString()) > -1) { 
+                                    content += `<button class="btn btn-danger btn-circle waves-effect waves-circle waves-float like" data-id="${e._id}"><i class="material-icons">favorite</i></button>`
+                                }
+                                else {
+                                    content += `<button class="btn btn-grey btn-circle waves-effect waves-circle waves-float like" data-id="${e._id}"><i class="material-icons">favorite</i></button>`
+                                } 
+                                if(user.events.indexOf(e._id.toString()) > -1) {
+                                    content += `<button class="btn btn-success btn-circle waves-effect waves-circle waves-float add" data-id="${e._id}"><i class="material-icons">done</i></button>`
+                                }
+                                else {
+                                    content += `<button class="btn btn-grey btn-circle waves-effect waves-circle waves-float add" data-id="${e._id}"><i class="material-icons">done</i></button>`
+                                }
+                            content += `
+                                </div>
+                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                    <small class="alert alert-danger" id="likes-${e._id}">${e.likes.length}</small>
+                                    <small class="alert alert-success" id="presents-${e._id}">${e.presents.length}</small>
+                                </div>`
+
+                                content += `
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+                $('#conteudo').append(content)
+                $('#conteudo').show(500)
+                
+            })
+        }
+
+        $.get('http://localhost:3000/my-events?id_user=<%= locals.user._id %>', function(results) {
+            events = results
+            let showEvents = []
+            // set calendar
+            let dates = []
+            events.forEach(e => {
+                e.date.replace('/g', '-')
+                console.log(e.date)
+                dates.push(e.date)
+            })
+            myCalendar.select(dates);
+            myCalendar.onDateClick(function(event, date){
+                const day = date.getDate()
+                const month = date.getMonth() < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1
+                const year = date.getFullYear()
+                const fullDate = `${day}/${month}/${year}`
+                showEvents.splice(0, showEvents.length)
+                events.forEach(e => {
+                    if(e.date == fullDate) {
+                        showEvents.push(e)
+                    }
+                })
+                setEventsDay(showEvents)
+            });
+            const date = new Date()
+            const todayDay = date.getDate()
+            const todayMonth = date.getMonth() < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1
+            const todayYear = date.getFullYear()
+            const today = `${todayDay}/${todayMonth}/${todayYear}`
+            events.forEach(e => {
+                if(e.date == today) {
+                    showEvents.push(e)
+                }
+            })
+            setEventsDay(showEvents)
+            
+        })
+
+        
+
+        $(document).on('click','.like', function(e) {
+            $.post('http://localhost:3000/like', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#likes-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-danger')
+                    $(selector).text(data.totalLikes.toString())
+                } else {
+                    $(this).removeClass('btn-danger').addClass('btn-grey')
+                    $(selector).text(data.totalLikes.toString())
+                }
+            })
+        })
+        $(document).on('click','.add', function(e) {
+            $.post('http://localhost:3000/calendar', {
+                id_user:'<%= locals.user._id %>',
+                id_event: $(this).attr('data-id')
+            },(data) => {
+                let selector = '#presents-'+$(this).attr('data-id')
+                if(data.result) {
+                    $(this).removeClass('btn-grey').addClass('btn-success')
+                    $(selector).text(data.totalPresents.toString())
+                } else {
+                    $(this).removeClass('btn-success').addClass('btn-grey')
+                    $(selector).text(data.totalPresents.toString())
+                }
+            })
+        })
+
+        
+    })
+</script>
+<% } %>
+
+<% include ../partials/footer.ejs %>
+
